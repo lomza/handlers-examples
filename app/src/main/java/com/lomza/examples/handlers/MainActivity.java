@@ -13,6 +13,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import java.lang.ref.WeakReference;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Main activity with methods to demonstrates the usage of Handlers, Runnables, and Messages :)
@@ -26,7 +27,8 @@ public class MainActivity extends AppCompatActivity {
     private TextView tv04;
     private TextView tv05;
     private TextView tv06;
-    private Button button06;
+    private TextView tv07;
+    private Button button07;
 
     private final Handler mainThreadHandler = new Handler(Looper.getMainLooper());
     private Handler currentThreadHandler;
@@ -53,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
         postTaskWithOrdinaryThread();
         postTaskWithHandlerOnMainThread();
         postTaskWithHandlerOnCurrentThread();
+        postTaskInsideBackgroundTask();
         //postTaskWithHandlerOnBackgroundThread();
         postTaskWithNotLeakyHandlerAndRunnable();
         sendMessageToChangeTextHandler();
@@ -82,8 +85,9 @@ public class MainActivity extends AppCompatActivity {
         tv04 = (TextView) findViewById(R.id.tv_04);
         tv05 = (TextView) findViewById(R.id.tv_05);
         tv06 = (TextView) findViewById(R.id.tv_06);
-        button06 = (Button) findViewById(R.id.button_06);
-        button06.setOnClickListener(new View.OnClickListener() {
+        tv07 = (TextView) findViewById(R.id.tv_07);
+        button07 = (Button) findViewById(R.id.button_07);
+        button07.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 postTaskWithThisWindowAndTextViewHandlers();
@@ -138,6 +142,29 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private void postTaskInsideBackgroundTask() {
+        Thread backgroundThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                // pretend to do something "background-y"
+                try {
+                    TimeUnit.SECONDS.sleep(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                mainThreadHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        tv04.setText("Hi from a Handler inside of a background Thread!");
+                    }
+                });
+            }
+        });
+
+        backgroundThread.start();
+    }
+
     @UiThread
     private void postTaskWithThisWindowAndTextViewHandlers() {
         // this line will return null from onCreate() (and even if called from onResume()) and cause NPE when trying to post();
@@ -147,10 +174,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 // View's post() uses UI handler internally
-                tv06.post(new Runnable() {
+                tv07.post(new Runnable() {
                     @Override
                     public void run() {
-                        tv06.setText("Hi from getWindow().getDecorView().getHandler() > TextView.post()!");
+                        tv07.setText("Hi from getWindow().getDecorView().getHandler() > TextView.post()!");
                         Log.d(TAG, "[postTaskWithThisWindowAndTextViewHandlers] Current looper is a main thread (UI) looper: "
                                 + (Looper.myLooper() == Looper.getMainLooper()));
                     }
@@ -216,7 +243,7 @@ public class MainActivity extends AppCompatActivity {
         Bundle bundle = new Bundle();
         bundle.putString(BUNDLE_KEY, "Hi from custom inner Handler!");
         messageToSend.setData(bundle);
-        messageToSend.what = 4;
+        messageToSend.what = 6;
         customHandler.sendMessage(messageToSend);
     }
 
@@ -238,8 +265,8 @@ public class MainActivity extends AppCompatActivity {
             final String text = (String) msg.getData().get(BUNDLE_KEY);
             if (!TextUtils.isEmpty(text)) {
                 switch (msg.what) {
-                    case 4:
-                        activity.tv04.setText(text);
+                    case 6:
+                        activity.tv06.setText(text);
                         break;
                     default:
                         activity.tv01.setText(text);
